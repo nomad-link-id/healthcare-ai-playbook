@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Healthcare AI Playbook - Interactive Playground</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --orange: #db6d28;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 0.75rem; }
+  h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 80px;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+  }
+  button:hover { opacity: 0.9; }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .tag-low { background: #1a3a1a; color: var(--green); }
+  .tag-medium { background: #3a2a0a; color: var(--yellow); }
+  .tag-high { background: #3a1a1a; color: var(--red); }
+  .tag-verified { background: #1a3a1a; color: var(--green); }
+  .tag-phantom { background: #3a1a1a; color: var(--red); }
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .metric:last-child { border-bottom: none; }
+  .metric-label { color: var(--text-muted); }
+  .metric-value { font-weight: 600; }
+  .result-item {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .result-item .score-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+  .result-item .score-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .response-text { white-space: pre-wrap; font-size: 0.85rem; line-height: 1.7; }
+  .citation-valid { color: var(--green); font-weight: 600; }
+  .citation-phantom { color: var(--red); text-decoration: line-through; }
+  .hidden { display: none; }
+  .step-indicator {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .step {
+    padding: 0.3rem 0.75rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .step.active { border-color: var(--accent); color: var(--accent); }
+  .step.done { border-color: var(--green); color: var(--green); }
+  select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+<h1>Healthcare AI Playbook</h1>
+<p class="subtitle">Interactive playground -- explore the full RAG trust pipeline</p>
+
+<div class="step-indicator" id="steps">
+  <span class="step" id="step-input">1. Input</span>
+  <span class="step" id="step-route">2. Route</span>
+  <span class="step" id="step-retrieve">3. Retrieve</span>
+  <span class="step" id="step-generate">4. Generate</span>
+  <span class="step" id="step-verify">5. Verify</span>
+</div>
+
+<div class="panel">
+  <h2>Query</h2>
+  <select id="presets">
+    <option value="">Type your own or select a preset...</option>
+    <option value="What is the first-line treatment for heart failure with reduced ejection fraction?">Simple: Heart failure treatment</option>
+    <option value="Compare ACE inhibitors versus ARBs for hypertension management in diabetic patients with CKD stage 3, considering renal protective effects and contraindications">Complex: ACE vs ARBs comparison</option>
+    <option value="What is the dosing?">Follow-up: Ambiguous (needs context)</option>
+    <option value="Patient reports chest pain radiating to left arm with shortness of breath">Emergency: Possible AMI</option>
+  </select>
+  <textarea id="query" placeholder="Enter a clinical query..."></textarea>
+  <button onclick="runPipeline()">Run Pipeline</button>
+</div>
+
+<div id="results" class="hidden">
+  <div class="grid">
+    <div class="panel">
+      <h2>Routing Decision</h2>
+      <div id="routing-results"></div>
+    </div>
+    <div class="panel">
+      <h2>Retrieval Results</h2>
+      <div id="retrieval-results"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Generated Response (simulated)</h2>
+    <div id="generated-response" class="response-text"></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Citation Verification</h2>
+      <div id="verification-results"></div>
+    </div>
+    <div class="panel">
+      <h2>Final Metrics</h2>
+      <div id="metrics-results"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Clean Response (verified)</h2>
+    <div id="clean-response" class="response-text"></div>
+  </div>
+</div>
+
+<script>
+// --- Mock corpus ---
+const CORPUS = [
+  { id: '1', content: 'ACC/AHA 2022 guidelines recommend ACE inhibitors (enalapril, ramipril) or ARNIs (sacubitril/valsartan) as first-line therapy for HFrEF. Target doses should be achieved over 2-4 weeks with monitoring of renal function and potassium.', source: 'national_protocol', authority: 1.5, year: 2022, isLandmark: false },
+  { id: '2', content: 'Beta-blockers (carvedilol, metoprolol succinate, bisoprolol) reduce mortality in HFrEF by 34%. Initiate at low dose after hemodynamic stabilization. Contraindicated in decompensated HF, severe bradycardia, and high-degree AV block.', source: 'peer_reviewed', authority: 1.0, year: 2023, isLandmark: false },
+  { id: '3', content: 'SGLT2 inhibitors (dapagliflozin, empagliflozin) reduce HF hospitalization by 26% regardless of diabetes status. DAPA-HF and EMPEROR-Reduced trials established class I recommendation.', source: 'peer_reviewed', authority: 1.0, year: 2024, isLandmark: true },
+  { id: '4', content: 'Mineralocorticoid receptor antagonists (spironolactone, eplerenone) reduce mortality in HFrEF with LVEF <=35%. Monitor potassium closely. Contraindicated if K+ >5.0 or eGFR <30.', source: 'medical_society', authority: 1.3, year: 2021, isLandmark: false },
+  { id: '5', content: 'Diuretics (furosemide, bumetanide) provide symptomatic relief of congestion but have no mortality benefit. Use the lowest effective dose. Monitor electrolytes and renal function.', source: 'peer_reviewed', authority: 1.0, year: 2020, isLandmark: false },
+  { id: '6', content: 'ACE inhibitors show renal protective effects in diabetic nephropathy. Ramipril 10mg daily reduced progression to ESRD by 24% in the HOPE trial. Monitor creatinine within 2 weeks of initiation.', source: 'national_protocol', authority: 1.5, year: 2019, isLandmark: true },
+  { id: '7', content: 'ARBs (losartan, valsartan) are recommended when ACE inhibitors are not tolerated due to cough. Equivalent renal protection in the RENAAL and IDNT trials. Do not combine ACE + ARB (ONTARGET showed harm).', source: 'peer_reviewed', authority: 1.0, year: 2022, isLandmark: false },
+];
+
+const MODELS = [
+  { id: 'groq-llama', name: 'Groq Llama 3.3 70B', cost: 0.01, maxComplexity: 0.4, latency: 200 },
+  { id: 'haiku', name: 'Claude Haiku', cost: 0.25, maxComplexity: 0.7, latency: 400 },
+  { id: 'sonnet', name: 'Claude Sonnet', cost: 3.00, maxComplexity: 1.0, latency: 800 },
+];
+
+const EMERGENCY_PATTERNS = /\b(chest pain|radiating.*arm|shortness of breath|sudden numbness|facial droop|suicid|overdose|anaphyla|can'?t breathe|severa bleeding)\b/i;
+
+const MULTI_PART = /\b(compare|versus|vs\.?|difference between|and also|additionally)\b/i;
+const DOMAIN_TERMS = ['diagnosis','treatment','dosing','contraindication','prognosis','pathophysiology','pharmacokinetics','etiology','comorbidity','differential','protocol','guideline','efficacy','renal','hepatic','cardiac'];
+const CITATION_SIGNALS = /\b(cite|source|reference|evidence|study|literature)\b/i;
+
+// --- Pipeline functions ---
+
+function scoreComplexity(query) {
+  const tokens = Math.ceil(query.length / 4);
+  const multiPart = MULTI_PART.test(query);
+  const lower = query.toLowerCase();
+  const domainHits = DOMAIN_TERMS.filter(t => lower.includes(t)).length;
+  const domainSpecific = domainHits >= 2;
+  const citeRequired = CITATION_SIGNALS.test(query);
+
+  let score = 0.2;
+  if (tokens > 100) score += 0.2;
+  else if (tokens > 50) score += 0.1;
+  if (multiPart) score += 0.2;
+  if (domainSpecific) score += 0.2;
+  if (citeRequired) score += 0.1;
+  return Math.min(score, 1.0);
+}
+
+function routeQuery(query) {
+  const complexity = scoreComplexity(query);
+  const sorted = [...MODELS].sort((a, b) => a.cost - b.cost);
+  const model = sorted.find(m => m.maxComplexity >= complexity) || sorted[sorted.length - 1];
+  const estTokens = Math.ceil(query.length / 4) + 500;
+  return { model, complexity, cost: ((estTokens / 1000) * model.cost).toFixed(4) };
+}
+
+function bm25Score(query, doc) {
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  const docTerms = doc.content.toLowerCase().split(/\s+/);
+  let score = 0;
+  for (const term of queryTerms) {
+    const tf = docTerms.filter(t => t.includes(term)).length;
+    if (tf > 0) score += Math.log(1 + tf) * (1 + Math.log(CORPUS.length / (1 + CORPUS.filter(d => d.content.toLowerCase().includes(term)).length)));
+  }
+  return score;
+}
+
+function retrieveDocuments(query) {
+  const threshold = 0.60;
+  const now = new Date().getFullYear();
+
+  const scored = CORPUS.map(doc => {
+    const bm25 = bm25Score(query, doc);
+    const contentOverlap = (() => {
+      const qWords = new Set(query.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+      const dWords = doc.content.toLowerCase().split(/\s+/);
+      const matches = dWords.filter(w => qWords.has(w)).length;
+      return qWords.size > 0 ? matches / (qWords.size + dWords.length - matches) : 0;
+    })();
+
+    const rrfBm25 = bm25 > 0 ? 1 : 0;
+    const rrfSemantic = contentOverlap > 0.01 ? 1 : 0;
+    let rrfScore = 0;
+    if (rrfBm25) rrfScore += bm25 / (60 + 1);
+    if (rrfSemantic) rrfScore += contentOverlap;
+
+    // Authority boost
+    const authorityWeight = doc.authority;
+    // Recency
+    let recencyWeight = 1.0;
+    const age = now - doc.year;
+    if (!doc.isLandmark) {
+      if (age <= 3) recencyWeight = 1.2;
+      else if (age > 10) recencyWeight = 0.8;
+    }
+
+    const finalScore = rrfScore * authorityWeight * recencyWeight;
+    return { ...doc, bm25: bm25.toFixed(2), semantic: contentOverlap.toFixed(3), rrfScore: rrfScore.toFixed(4), finalScore: finalScore.toFixed(4) };
+  }).filter(d => parseFloat(d.finalScore) > 0)
+    .sort((a, b) => parseFloat(b.finalScore) - parseFloat(a.finalScore))
+    .slice(0, 5);
+
+  return scored;
+}
+
+function simulateResponse(query, docs) {
+  if (EMERGENCY_PATTERNS.test(query)) {
+    return {
+      isEmergency: true,
+      text: 'EMERGENCY DETECTED: Symptoms consistent with acute myocardial infarction (AMI).\n\n' +
+        'IMMEDIATE ACTIONS:\n' +
+        '- Call emergency services (SAMU 192 / 911) immediately\n' +
+        '- Administer aspirin 300mg if available and no contraindication\n' +
+        '- Do not delay transport to emergency department\n' +
+        '- Obtain 12-lead ECG within 10 minutes of arrival\n\n' +
+        'This is a deterministic safety response. No LLM was used.'
+    };
+  }
+
+  if (docs.length === 0) {
+    return { isEmergency: false, text: 'Insufficient evidence found in the corpus to answer this query. Please refine your search terms.' };
+  }
+
+  // Simulated LLM response with citations (including a phantom one)
+  const responses = {
+    simple: `Based on current guidelines [1], the recommended first-line therapy for heart failure with reduced ejection fraction (HFrEF) includes:\n\n1. ACE inhibitors or ARNIs (sacubitril/valsartan) [1]\n2. Beta-blockers (carvedilol, metoprolol succinate, bisoprolol) [2]\n3. SGLT2 inhibitors (dapagliflozin, empagliflozin) [3]\n4. Mineralocorticoid receptor antagonists [4]\n\nRecent trials have demonstrated that early quadruple therapy provides superior outcomes [8]. Diuretics [5] are used for symptom relief but do not improve mortality.`,
+    complex: `ACE inhibitors and ARBs serve different roles in hypertension management for diabetic patients with CKD [1][6].\n\nACE inhibitors (ramipril, enalapril) demonstrate renal protective effects through efferent arteriole dilation [6]. The HOPE trial showed 24% reduction in ESRD progression [6].\n\nARBs (losartan, valsartan) are recommended when ACE inhibitors are not tolerated [7]. The RENAAL and IDNT trials confirmed equivalent renal protection [7].\n\nCritical warning: Do not combine ACE + ARB. The ONTARGET trial demonstrated increased adverse events without benefit [7][9].`,
+    followup: `Could you clarify what condition you are asking about? The query "What is the dosing?" needs context. Please specify the medication and condition.\n\nFor common HFrEF medications:\n- Enalapril: start 2.5mg BID, target 10-20mg BID [1]\n- Carvedilol: start 3.125mg BID, target 25mg BID [2]\n- Dapagliflozin: 10mg once daily [3]`,
+  };
+
+  const complexity = scoreComplexity(query);
+  if (complexity > 0.6) return { isEmergency: false, text: responses.complex };
+  if (query.length < 30) return { isEmergency: false, text: responses.followup };
+  return { isEmergency: false, text: responses.simple };
+}
+
+function verifyCitations(text, docs) {
+  const regex = /\[(\d+)\]/g;
+  const all = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    all.push({ id: parseInt(match[1]), position: match.index, marker: match[0] });
+  }
+
+  const unique = [...new Set(all.map(c => c.id))].sort((a, b) => a - b);
+  const verified = new Set();
+  const phantom = new Set();
+
+  for (const id of unique) {
+    if (id >= 1 && id <= docs.length) verified.add(id);
+    else phantom.add(id);
+  }
+
+  // Strip phantoms (reverse order)
+  let clean = text;
+  const phantomOccurrences = all.filter(c => phantom.has(c.id)).sort((a, b) => b.position - a.position);
+  for (const occ of phantomOccurrences) {
+    clean = clean.slice(0, occ.position) + clean.slice(occ.position + occ.marker.length);
+  }
+  clean = clean.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+
+  return {
+    clean,
+    citations: unique.map(id => ({ id, verified: verified.has(id), source: verified.has(id) ? docs[id-1]?.source || '' : '' })),
+    stats: { total: unique.length, verified: verified.size, removed: phantom.size, rate: unique.length > 0 ? (phantom.size / unique.length * 100).toFixed(0) : '0' }
+  };
+}
+
+// --- UI ---
+
+document.getElementById('presets').addEventListener('change', function() {
+  if (this.value) document.getElementById('query').value = this.value;
+});
+
+function setStep(step) {
+  const steps = ['input','route','retrieve','generate','verify'];
+  const idx = steps.indexOf(step);
+  steps.forEach((s, i) => {
+    const el = document.getElementById('step-' + s);
+    el.className = 'step' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  });
+}
+
+function runPipeline() {
+  const query = document.getElementById('query').value.trim();
+  if (!query) return;
+
+  document.getElementById('results').classList.remove('hidden');
+
+  // Step 1: Route
+  setStep('route');
+  const routing = routeQuery(query);
+  const complexityClass = routing.complexity <= 0.4 ? 'low' : routing.complexity <= 0.7 ? 'medium' : 'high';
+  document.getElementById('routing-results').innerHTML = `
+    <div class="metric"><span class="metric-label">Complexity Score</span><span class="metric-value">${routing.complexity.toFixed(2)} <span class="tag tag-${complexityClass}">${complexityClass}</span></span></div>
+    <div class="metric"><span class="metric-label">Selected Model</span><span class="metric-value">${routing.model.name}</span></div>
+    <div class="metric"><span class="metric-label">Model ID</span><span class="metric-value">${routing.model.id}</span></div>
+    <div class="metric"><span class="metric-label">Estimated Cost</span><span class="metric-value">$${routing.cost}</span></div>
+    <div class="metric"><span class="metric-label">Expected Latency</span><span class="metric-value">${routing.model.latency}ms</span></div>
+  `;
+
+  // Step 2: Retrieve
+  setTimeout(() => {
+    setStep('retrieve');
+    const docs = retrieveDocuments(query);
+    document.getElementById('retrieval-results').innerHTML = docs.length === 0
+      ? '<p style="color:var(--text-muted)">No documents matched the query above threshold.</p>'
+      : docs.map((d, i) => `
+        <div class="result-item">
+          <strong>[${d.id}]</strong> ${d.content.slice(0, 120)}...
+          <div style="margin-top:0.4rem;font-size:0.75rem;color:var(--text-muted)">
+            Source: ${d.source} | BM25: ${d.bm25} | Semantic: ${d.semantic} | Final: ${d.finalScore}
+          </div>
+          <div class="score-bar"><div class="score-fill" style="width:${Math.min(parseFloat(d.finalScore) * 3000, 100)}%"></div></div>
+        </div>
+      `).join('');
+
+    // Step 3: Generate
+    setTimeout(() => {
+      setStep('generate');
+      const response = simulateResponse(query, docs);
+      document.getElementById('generated-response').innerHTML = response.isEmergency
+        ? `<div style="border-left:3px solid var(--red);padding-left:1rem">${response.text}</div>`
+        : response.text;
+
+      if (response.isEmergency) {
+        document.getElementById('verification-results').innerHTML = '<p style="color:var(--yellow)">Emergency bypass -- no LLM used, no citations to verify.</p>';
+        document.getElementById('metrics-results').innerHTML = `
+          <div class="metric"><span class="metric-label">Pipeline</span><span class="metric-value">Emergency Bypass</span></div>
+          <div class="metric"><span class="metric-label">LLM Used</span><span class="metric-value">None (deterministic)</span></div>
+          <div class="metric"><span class="metric-label">Latency</span><span class="metric-value"><5ms</span></div>
+        `;
+        document.getElementById('clean-response').textContent = response.text;
+        setStep('verify');
+        return;
+      }
+
+      // Step 4: Verify
+      setTimeout(() => {
+        setStep('verify');
+        const verification = verifyCitations(response.text, docs);
+
+        document.getElementById('verification-results').innerHTML = `
+          <div class="metric"><span class="metric-label">Total Citations</span><span class="metric-value">${verification.stats.total}</span></div>
+          <div class="metric"><span class="metric-label">Verified</span><span class="metric-value" style="color:var(--green)">${verification.stats.verified}</span></div>
+          <div class="metric"><span class="metric-label">Phantom (removed)</span><span class="metric-value" style="color:var(--red)">${verification.stats.removed}</span></div>
+          <div class="metric"><span class="metric-label">Hallucination Rate</span><span class="metric-value">${verification.stats.rate}%</span></div>
+          <div style="margin-top:0.75rem">
+            ${verification.citations.map(c => `
+              <span class="tag ${c.verified ? 'tag-verified' : 'tag-phantom'}" style="margin:0.15rem">[${c.id}] ${c.verified ? 'verified' : 'phantom'}</span>
+            `).join('')}
+          </div>
+        `;
+
+        document.getElementById('metrics-results').innerHTML = `
+          <div class="metric"><span class="metric-label">Model Used</span><span class="metric-value">${routing.model.name}</span></div>
+          <div class="metric"><span class="metric-label">Documents Retrieved</span><span class="metric-value">${docs.length}</span></div>
+          <div class="metric"><span class="metric-label">Citations Verified</span><span class="metric-value">${verification.stats.verified}/${verification.stats.total}</span></div>
+          <div class="metric"><span class="metric-label">Citations Removed</span><span class="metric-value">${verification.stats.removed}</span></div>
+          <div class="metric"><span class="metric-label">Estimated Cost</span><span class="metric-value">$${routing.cost}</span></div>
+          <div class="metric"><span class="metric-label">Complexity</span><span class="metric-value">${routing.complexity.toFixed(2)}</span></div>
+        `;
+
+        document.getElementById('clean-response').textContent = verification.clean;
+      }, 300);
+    }, 300);
+  }, 300);
+}
+</script>
+</body>
+</html>
