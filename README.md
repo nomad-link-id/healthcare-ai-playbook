@@ -22,6 +22,7 @@ Try the techniques live: [healthcare-ai-playbook](https://nomad-link-id.github.i
 ## Techniques
 
 ### Retrieval
+
 | # | Technique | What It Solves |
 |---|-----------|---------------|
 | 01 | [Hybrid Search (BM25 + Semantic)](techniques/01-hybrid-search-bm25-semantic.md) | Pure semantic search misses exact drug names and diagnostic codes |
@@ -32,6 +33,7 @@ Try the techniques live: [healthcare-ai-playbook](https://nomad-link-id.github.i
 | 06 | [Contextual Query Enrichment](techniques/06-contextual-query-enrichment.md) | Follow-up questions lose context without enrichment |
 
 ### Trust & Verification
+
 | # | Technique | What It Solves |
 |---|-----------|---------------|
 | 07 | [Citation Verification](techniques/07-citation-verification.md) | LLMs fabricate references 15-30% of the time |
@@ -41,6 +43,7 @@ Try the techniques live: [healthcare-ai-playbook](https://nomad-link-id.github.i
 | 11 | [Two-Tier Response Pattern](techniques/11-two-tier-response-pattern.md) | 60% of users only need the quick answer |
 
 ### Safety & Compliance
+
 | # | Technique | What It Solves |
 |---|-----------|---------------|
 | 12 | [PII Scrubbing for Healthcare](techniques/12-pii-scrubbing-healthcare.md) | Patient data must never reach an external LLM |
@@ -51,6 +54,7 @@ Try the techniques live: [healthcare-ai-playbook](https://nomad-link-id.github.i
 | 17 | [Temperature Settings for Clinical AI](techniques/17-temperature-settings-clinical.md) | Your medical AI should not be creative |
 
 ### Infrastructure
+
 | # | Technique | What It Solves |
 |---|-----------|---------------|
 | 18 | [Deterministic Lab Classification](techniques/18-deterministic-lab-classification.md) | Lab results should never be interpreted by an LLM |
